@@ -42,6 +42,18 @@ public interface Platform {
     @NotNull CompletableFuture<Boolean> runAsConsole(@NotNull String command);
 
     /**
+     * Moves a player to a server.
+     *
+     * @param player who to move
+     * @param server the server, by the proxy's name for it
+     * @return {@code OK} once the proxy connected them (or they were already
+     *         there); {@code REJECTED} starting with {@code no server} for a
+     *         name the proxy does not know, or with the reason the connection
+     *         was refused; a player who is gone is {@code REJECTED} too
+     */
+    @NotNull CompletableFuture<Reply> connect(@NotNull UUID player, @NotNull String server);
+
+    /**
      * Sends bytes to the server a player is on, on the bridge channel.
      *
      * @param carrier the player whose connection carries them

@@ -46,6 +46,13 @@ class BridgeTest {
         }
 
         @Override
+        public CompletableFuture<Reply> connect(UUID player, String server) {
+            ran.add("connect " + player + " -> " + server);
+            return CompletableFuture.completedFuture(
+                    found ? Reply.ok() : Reply.rejected("no server \"" + server + "\""));
+        }
+
+        @Override
         public boolean reply(UUID carrier, byte[] data) {
             if (connected) {
                 replies.add(data);
@@ -101,6 +108,26 @@ class BridgeTest {
         Answer reply = answer(proxy.replies.get(0));
         assertEquals(1, reply.status());
         assertTrue(reply.detail().contains("/nosuchthing"), reply.detail());
+    }
+
+    @Test
+    @DisplayName("connect moves the carrier, or the player named after the pipe, and names a missing server")
+    void connect() throws IOException {
+        FakePlatform proxy = new FakePlatform();
+        Bridge bridge = Bridge.withBuiltIns(proxy);
+        UUID alex = UUID.nameUUIDFromBytes("alex".getBytes());
+        bridge.receive(STEVE, "Steve", "lobby", request("connect", 7, "arena-1"));
+        bridge.receive(STEVE, "Steve", "lobby", request("connect", 8, "lobby|" + alex));
+        bridge.receive(STEVE, "Steve", "lobby", request("connect", 9, "lobby|not-a-uuid"));
+        assertEquals(List.of("connect " + STEVE + " -> arena-1", "connect " + alex + " -> lobby"), proxy.ran);
+        assertEquals(0, answer(proxy.replies.get(0)).status());
+        assertEquals(1, answer(proxy.replies.get(2)).status());
+
+        proxy.found = false;
+        bridge.receive(STEVE, "Steve", "lobby", request("connect", 10, "arena-9"));
+        Answer reply = answer(proxy.replies.get(3));
+        assertEquals(1, reply.status());
+        assertTrue(reply.detail().startsWith("no server"), reply.detail());
     }
 
     @Test

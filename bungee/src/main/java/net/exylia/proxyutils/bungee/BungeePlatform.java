@@ -1,8 +1,10 @@
 package net.exylia.proxyutils.bungee;
 
 import net.exylia.proxyutils.Platform;
+import net.exylia.proxyutils.Reply;
 import net.exylia.proxyutils.Wire;
 import net.md_5.bungee.api.ProxyServer;
+import net.md_5.bungee.api.config.ServerInfo;
 import net.md_5.bungee.api.connection.ProxiedPlayer;
 import net.md_5.bungee.api.connection.Server;
 import org.jetbrains.annotations.NotNull;
@@ -56,6 +58,27 @@ final class BungeePlatform implements Platform {
     public @NotNull CompletableFuture<Boolean> runAsConsole(@NotNull String command) {
         return CompletableFuture.completedFuture(
                 proxy.getPluginManager().dispatchCommand(proxy.getConsole(), command));
+    }
+
+    @Override
+    public @NotNull CompletableFuture<Reply> connect(@NotNull UUID player, @NotNull String name) {
+        ServerInfo target = proxy.getServerInfo(name);
+        if (target == null) {
+            return CompletableFuture.completedFuture(Reply.rejected("no server \"" + name + "\""));
+        }
+        ProxiedPlayer who = proxy.getPlayer(player);
+        if (who == null) {
+            return CompletableFuture.completedFuture(Reply.rejected("player is not connected"));
+        }
+        Server current = who.getServer();
+        if (current != null && current.getInfo().getName().equals(name)) {
+            return CompletableFuture.completedFuture(Reply.ok("already there"));
+        }
+        CompletableFuture<Reply> done = new CompletableFuture<>();
+        who.connect(target, (connected, error) -> done.complete(error != null
+                ? Reply.rejected("server \"" + name + "\" refused the connection: " + error.getMessage())
+                : connected ? Reply.ok() : Reply.rejected("the proxy did not connect them")));
+        return done;
     }
 
     @Override

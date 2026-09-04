@@ -10,7 +10,7 @@ def outputDirectory = '/root/Java/jars'
 
 allprojects {
     group = 'net.exylia'
-    version = '1.0.0'
+    version = '1.1.0'
 
     repositories {
         mavenCentral()
