@@ -16,6 +16,7 @@ ExyliaLib sends such requests down a player's connection on the
 | `ping` | ignored | `OK` with `ExyliaProxyUtils <version> on <Velocity/BungeeCord>`. ExyliaLib sends one through the first player to join and prints it. |
 | `connect` | `<server>` moves the carrying player; `<server>\|<uuid>` moves that player | `OK` once connected (or already there); `REJECTED` starting with `no server "<name>"` for a name the proxy does not know, or with the reason the connection was refused. What `Connect`/`ConnectOther` on the `BungeeCord` channel do, with an answer. ExyliaLib's cross-server teleports use it whenever the bridge has answered, and fall back to the `BungeeCord` channel otherwise. |
 | `player` | a name or a uuid | `OK` with `uuid\|name\|server` for a connected player (server empty while between servers); `REJECTED` otherwise. What lets a backend resolve `/tp <name>` for somebody it has never seen. |
+| `players` | ignored | `OK` with every connected name, comma-separated. ExyliaLib asks every 10 s through whoever is online and keeps the answer for tab completion. |
 | `commands` | `<actor>:<command>` — `player-proxy:server lobby` runs as the carrying player, `console-proxy:alert hi` as the proxy console (logged) | `OK` if the proxy found and ran the command; `REJECTED` with the command's name if it did not. |
 
 On the Paper side these are the `player-proxy:` and `console-proxy:` prefixes

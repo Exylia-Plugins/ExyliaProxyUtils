@@ -12,6 +12,7 @@ import net.exylia.proxyutils.Wire;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 
+import java.util.Collection;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -61,6 +62,11 @@ final class VelocityPlatform implements Platform {
     @Override
     public @NotNull CompletableFuture<Boolean> runAsConsole(@NotNull String command) {
         return server.getCommandManager().executeAsync(server.getConsoleCommandSource(), command);
+    }
+
+    @Override
+    public @NotNull Collection<String> playerNames() {
+        return server.getAllPlayers().stream().map(Player::getUsername).toList();
     }
 
     @Override

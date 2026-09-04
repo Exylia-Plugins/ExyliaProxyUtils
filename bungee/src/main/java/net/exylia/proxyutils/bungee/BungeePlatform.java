@@ -10,6 +10,7 @@ import net.md_5.bungee.api.connection.ProxiedPlayer;
 import net.md_5.bungee.api.connection.Server;
 import org.jetbrains.annotations.NotNull;
 
+import java.util.Collection;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -60,6 +61,11 @@ final class BungeePlatform implements Platform {
     public @NotNull CompletableFuture<Boolean> runAsConsole(@NotNull String command) {
         return CompletableFuture.completedFuture(
                 proxy.getPluginManager().dispatchCommand(proxy.getConsole(), command));
+    }
+
+    @Override
+    public @NotNull Collection<String> playerNames() {
+        return proxy.getPlayers().stream().map(ProxiedPlayer::getName).toList();
     }
 
     @Override

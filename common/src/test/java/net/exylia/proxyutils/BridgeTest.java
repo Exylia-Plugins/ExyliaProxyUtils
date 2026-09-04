@@ -46,6 +46,11 @@ class BridgeTest {
         }
 
         @Override
+        public java.util.Collection<String> playerNames() {
+            return List.of("Steve", "Alex");
+        }
+
+        @Override
         public java.util.Optional<ProxyPlayer> find(String nameOrId) {
             boolean steve = nameOrId.equalsIgnoreCase("steve") || nameOrId.equals(STEVE.toString());
             return steve ? java.util.Optional.of(new ProxyPlayer(STEVE, "Steve", "lobby"))
@@ -148,6 +153,9 @@ class BridgeTest {
         assertEquals(new Answer("player", 11, 0, STEVE + "|Steve|lobby"), answer(proxy.replies.get(0)));
         assertEquals(0, answer(proxy.replies.get(1)).status());
         assertEquals(1, answer(proxy.replies.get(2)).status());
+
+        bridge.receive(STEVE, "Steve", "lobby", request("players", 14, ""));
+        assertEquals("Steve,Alex", answer(proxy.replies.get(3)).detail());
     }
 
     @Test

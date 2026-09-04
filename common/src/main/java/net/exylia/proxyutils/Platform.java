@@ -2,6 +2,7 @@ package net.exylia.proxyutils;
 
 import org.jetbrains.annotations.NotNull;
 
+import java.util.Collection;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -41,6 +42,9 @@ public interface Platform {
      * @return whether the proxy found and ran the command
      */
     @NotNull CompletableFuture<Boolean> runAsConsole(@NotNull String command);
+
+    /** The names of every connected player, in no particular order. */
+    @NotNull Collection<String> playerNames();
 
     /**
      * Finds a connected player by name or by id.
