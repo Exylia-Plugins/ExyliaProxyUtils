@@ -4,7 +4,9 @@ import net.exylia.proxyutils.Bridge;
 import net.exylia.proxyutils.Wire;
 import net.md_5.bungee.api.connection.ProxiedPlayer;
 import net.md_5.bungee.api.connection.Server;
+import net.md_5.bungee.api.event.PlayerDisconnectEvent;
 import net.md_5.bungee.api.event.PluginMessageEvent;
+import net.md_5.bungee.api.event.ServerConnectedEvent;
 import net.md_5.bungee.api.plugin.Listener;
 import net.md_5.bungee.api.plugin.Plugin;
 import net.md_5.bungee.event.EventHandler;
@@ -18,12 +20,13 @@ import net.md_5.bungee.event.EventHandler;
 public final class ExyliaProxyUtilsBungee extends Plugin implements Listener {
 
     private Bridge bridge;
+    private BungeePlatform platform;
 
     @Override
     public void onEnable() {
         getProxy().registerChannel(Wire.CHANNEL);
-        bridge = Bridge.withBuiltIns(new BungeePlatform(getProxy(), getLogger(),
-                getDescription().getVersion()));
+        platform = new BungeePlatform(getProxy(), getLogger(), getDescription().getVersion());
+        bridge = Bridge.withBuiltIns(platform);
         getProxy().getPluginManager().registerListener(this, this);
         getLogger().info("ExyliaProxyUtils " + getDescription().getVersion() + " ready; modules: "
                 + bridge.modules());
@@ -33,6 +36,20 @@ public final class ExyliaProxyUtilsBungee extends Plugin implements Listener {
     public void onDisable() {
         getProxy().getPluginManager().unregisterListeners(this);
         getProxy().unregisterChannel(Wire.CHANNEL);
+    }
+
+    /** Delivers the memo of a {@code connect} once the player is on the new server. */
+    @EventHandler
+    public void onConnected(ServerConnectedEvent event) {
+        byte[] memo = platform.takeArrival(event.getPlayer().getUniqueId());
+        if (memo != null) {
+            event.getServer().sendData(Wire.CHANNEL, memo);
+        }
+    }
+
+    @EventHandler
+    public void onDisconnect(PlayerDisconnectEvent event) {
+        platform.forget(event.getPlayer().getUniqueId());
     }
 
     @EventHandler

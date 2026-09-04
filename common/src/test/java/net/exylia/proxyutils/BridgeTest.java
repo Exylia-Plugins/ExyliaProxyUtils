@@ -58,8 +58,8 @@ class BridgeTest {
         }
 
         @Override
-        public CompletableFuture<Reply> connect(UUID player, String server) {
-            ran.add("connect " + player + " -> " + server);
+        public CompletableFuture<Reply> connect(UUID player, String server, String memo) {
+            ran.add("connect " + player + " -> " + server + (memo == null ? "" : " with " + memo));
             return CompletableFuture.completedFuture(
                     found ? Reply.ok() : Reply.rejected("no server \"" + server + "\""));
         }
@@ -129,9 +129,11 @@ class BridgeTest {
         Bridge bridge = Bridge.withBuiltIns(proxy);
         UUID alex = UUID.nameUUIDFromBytes("alex".getBytes());
         bridge.receive(STEVE, "Steve", "lobby", request("connect", 7, "arena-1"));
-        bridge.receive(STEVE, "Steve", "lobby", request("connect", 8, "lobby|" + alex));
+        bridge.receive(STEVE, "Steve", "lobby", request("connect", 8, "|" + alex + "|lobby,world,1,2,3"));
         bridge.receive(STEVE, "Steve", "lobby", request("connect", 9, "lobby|not-a-uuid"));
-        assertEquals(List.of("connect " + STEVE + " -> arena-1", "connect " + alex + " -> lobby"), proxy.ran);
+        assertEquals(List.of("connect " + STEVE + " -> arena-1",
+                "connect " + alex + " -> lobby with lobby,world,1,2,3"), proxy.ran,
+                "an empty server is the one the request came from; the memo travels whole");
         assertEquals(0, answer(proxy.replies.get(0)).status());
         assertEquals(1, answer(proxy.replies.get(2)).status());
 
@@ -156,6 +158,12 @@ class BridgeTest {
 
         bridge.receive(STEVE, "Steve", "lobby", request("players", 14, ""));
         assertEquals("Steve,Alex", answer(proxy.replies.get(3)).detail());
+    }
+
+    @Test
+    @DisplayName("a push is an answer with id 0")
+    void push() throws IOException {
+        assertEquals(new Answer("arrive", 0, 0, "player:abc"), answer(Wire.push("arrive", "player:abc")));
     }
 
     @Test

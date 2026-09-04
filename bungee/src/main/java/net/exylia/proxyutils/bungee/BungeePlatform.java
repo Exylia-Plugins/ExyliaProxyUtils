@@ -9,8 +9,11 @@ import net.md_5.bungee.api.config.ServerInfo;
 import net.md_5.bungee.api.connection.ProxiedPlayer;
 import net.md_5.bungee.api.connection.Server;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.Collection;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -22,6 +25,16 @@ final class BungeePlatform implements Platform {
     private final ProxyServer proxy;
     private final Logger logger;
     private final String version;
+
+    /**
+     * Memos waiting for their player to finish switching.
+     *
+     * <p>BungeeCord's connect callback fires before the switch is complete,
+     * when {@code getServer()} still names the old server, so the memo is
+     * held here and sent from {@code ServerConnectedEvent}, whose server is
+     * the new connection.
+     */
+    private final Map<UUID, byte[]> arrivals = new ConcurrentHashMap<>();
 
     BungeePlatform(ProxyServer proxy, Logger logger, String version) {
         this.proxy = proxy;
@@ -85,7 +98,8 @@ final class BungeePlatform implements Platform {
     }
 
     @Override
-    public @NotNull CompletableFuture<Reply> connect(@NotNull UUID player, @NotNull String name) {
+    public @NotNull CompletableFuture<Reply> connect(@NotNull UUID player, @NotNull String name,
+                                                     @Nullable String memo) {
         ServerInfo target = proxy.getServerInfo(name);
         if (target == null) {
             return CompletableFuture.completedFuture(Reply.rejected("no server \"" + name + "\""));
@@ -96,13 +110,34 @@ final class BungeePlatform implements Platform {
         }
         Server current = who.getServer();
         if (current != null && current.getInfo().getName().equals(name)) {
+            if (memo != null) {
+                current.sendData(Wire.CHANNEL, Wire.push("arrive", memo));
+            }
             return CompletableFuture.completedFuture(Reply.ok("already there"));
         }
+        if (memo != null) {
+            arrivals.put(player, Wire.push("arrive", memo));
+        }
         CompletableFuture<Reply> done = new CompletableFuture<>();
-        who.connect(target, (connected, error) -> done.complete(error != null
-                ? Reply.rejected("server \"" + name + "\" refused the connection: " + error.getMessage())
-                : connected ? Reply.ok() : Reply.rejected("the proxy did not connect them")));
+        who.connect(target, (connected, error) -> {
+            if (error != null || !connected) {
+                arrivals.remove(player);
+            }
+            done.complete(error != null
+                    ? Reply.rejected("server \"" + name + "\" refused the connection: " + error.getMessage())
+                    : connected ? Reply.ok() : Reply.rejected("the proxy did not connect them"));
+        });
         return done;
+    }
+
+    /** The memo a player who just switched is carrying, if any; taken once. */
+    byte @Nullable [] takeArrival(@NotNull UUID player) {
+        return arrivals.remove(player);
+    }
+
+    /** Drops what a player who left was carrying. */
+    void forget(@NotNull UUID player) {
+        arrivals.remove(player);
     }
 
     @Override
