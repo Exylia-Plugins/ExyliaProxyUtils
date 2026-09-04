@@ -10,7 +10,7 @@ def outputDirectory = '/root/Java/jars'
 
 allprojects {
     group = 'net.exylia'
-    version = '1.4.0'
+    version = '2.0.0'
 
     repositories {
         mavenCentral()
@@ -53,6 +53,15 @@ shadowJar {
     archiveBaseName.set('ExyliaProxyUtils')
     archiveClassifier.set('')
     destinationDirectory = file("${outputDirectory}/plugins")
+    // Jedis and everything it drags in live under our own package, so a proxy
+    // that already has a Gson or an slf4j of its own never meets ours.
+    relocate 'redis.clients', 'net.exylia.proxyutils.libs.redis'
+    relocate 'org.apache.commons.pool2', 'net.exylia.proxyutils.libs.pool2'
+    relocate 'org.slf4j', 'net.exylia.proxyutils.libs.slf4j'
+    relocate 'org.json', 'net.exylia.proxyutils.libs.json'
+    relocate 'com.google.gson', 'net.exylia.proxyutils.libs.gson'
+    exclude 'META-INF/maven/**'
+    exclude 'META-INF/*.SF', 'META-INF/*.DSA', 'META-INF/*.RSA'
 }
 
 tasks.named('build') { dependsOn shadowJar }

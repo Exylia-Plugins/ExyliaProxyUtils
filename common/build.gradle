@@ -1,2 +1,7 @@
 // No proxy on the classpath, on purpose: everything the bridge decides —
 // framing, routing, what a module answers — is testable without either.
+dependencies {
+    // Shaded and relocated into the universal jar by the root project; the
+    // same version ExyliaLib installs on the backends.
+    implementation 'redis.clients:jedis:5.1.0'
+}

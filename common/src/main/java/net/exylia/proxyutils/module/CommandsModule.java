@@ -14,7 +14,7 @@ import java.util.concurrent.CompletableFuture;
  *
  * <p>The payload is {@code <actor>:<command>}, the same shape every Exylia
  * config already writes: {@code player-proxy:server lobby} runs as the player
- * carrying the request, with their permissions; {@code console-proxy:alert hi}
+ * the request is about, with their permissions; {@code console-proxy:alert hi}
  * runs as the proxy console, and is logged, because a backend server just ran
  * something as root on the proxy and the log is where that belongs.
  *
@@ -54,18 +54,24 @@ public final class CommandsModule implements BridgeModule {
         if (command.isEmpty()) {
             return CompletableFuture.completedFuture(Reply.rejected("empty command"));
         }
-        CompletableFuture<Boolean> ran = switch (actor) {
-            case PLAYER -> platform.runAsPlayer(request.carrier(), command);
+        CompletableFuture<Boolean> ran;
+        switch (actor) {
+            case PLAYER -> {
+                if (request.carrier() == null) {
+                    return CompletableFuture.completedFuture(
+                            Reply.rejected("a player-proxy command needs a player to run as"));
+                }
+                ran = platform.runAsPlayer(request.carrier(), command);
+            }
             case CONSOLE -> {
                 platform.info("[" + request.server() + "] console: /" + command
-                        + " (through " + request.carrierName() + ")");
-                yield platform.runAsConsole(command);
+                        + (request.carrierName().isEmpty() ? "" : " (for " + request.carrierName() + ")"));
+                ran = platform.runAsConsole(command);
             }
-            default -> null;
-        };
-        if (ran == null) {
-            return CompletableFuture.completedFuture(Reply.rejected("unknown actor \"" + actor
-                    + "\"; use " + PLAYER + " or " + CONSOLE));
+            default -> {
+                return CompletableFuture.completedFuture(Reply.rejected("unknown actor \"" + actor
+                        + "\"; use " + PLAYER + " or " + CONSOLE));
+            }
         }
         String label = command.split(" ", 2)[0];
         return ran.thenApply(found -> found

@@ -1,7 +1,6 @@
 package net.exylia.proxyutils;
 
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
 import java.util.Collection;
 import java.util.Optional;
@@ -56,31 +55,14 @@ public interface Platform {
     @NotNull Optional<ProxyPlayer> find(@NotNull String nameOrId);
 
     /**
-     * Moves a player to a server, and tells that server something once
-     * they are there.
+     * Moves a player to a server.
      *
      * @param player who to move
      * @param server the server, by the proxy's name for it
-     * @param memo   what to hand the destination server through the player
-     *               once they have joined it, as an {@code arrive} push; null
-     *               for nothing. This is how a backend passes a destination
-     *               along without any shared storage: the proxy is the one
-     *               party that knows the moment the player is on the other side
      * @return {@code OK} once the proxy connected them (or they were already
      *         there); {@code REJECTED} starting with {@code no server} for a
      *         name the proxy does not know, or with the reason the connection
      *         was refused; a player who is gone is {@code REJECTED} too
      */
-    @NotNull CompletableFuture<Reply> connect(@NotNull UUID player, @NotNull String server,
-                                              @Nullable String memo);
-
-    /**
-     * Sends bytes to the server a player is on, on the bridge channel.
-     *
-     * @param carrier the player whose connection carries them
-     * @param data    the bytes
-     * @return false if the player is gone or between servers, in which case
-     *         nothing was sent
-     */
-    boolean reply(@NotNull UUID carrier, byte @NotNull [] data);
+    @NotNull CompletableFuture<Reply> connect(@NotNull UUID player, @NotNull String server);
 }

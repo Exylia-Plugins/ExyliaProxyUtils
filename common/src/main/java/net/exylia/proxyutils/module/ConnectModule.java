@@ -2,6 +2,7 @@ package net.exylia.proxyutils.module;
 
 import net.exylia.proxyutils.BridgeModule;
 import net.exylia.proxyutils.Platform;
+import net.exylia.proxyutils.Publisher;
 import net.exylia.proxyutils.Reply;
 import net.exylia.proxyutils.Request;
 import org.jetbrains.annotations.NotNull;
@@ -11,28 +12,31 @@ import java.util.concurrent.CompletableFuture;
 
 /**
  * Moves a player to another server, says whether it happened, and can hand
- * the destination server a note once they are there.
+ * the destination server a note for when they get there.
  *
  * <p>The payload is {@code <server>|<uuid>|<memo>}, the last two optional:
  * an empty server means the one the request came from, an empty uuid means
- * the player carrying the request, and a memo is delivered to the destination
- * server as an {@code arrive} push through the moved player the moment they
- * have joined it. That last part is what lets a teleport across the network
- * land <em>next to somebody</em> rather than at the spawn, with no Redis in
- * between: the server that asked writes where, the proxy carries it, the
- * server that receives them reads it.
+ * the player the request is about, and a memo is sent to the destination
+ * server as an {@code arrive} push once the proxy has connected them. That
+ * last part is what lets a teleport across the network land <em>next to
+ * somebody</em> rather than at the spawn: the server that asked writes
+ * where, the proxy carries it, the server that receives them reads it — and
+ * holds it until they have actually joined, since the push can win the race.
  *
- * <p>{@code Connect} and {@code ConnectOther} on the {@code BungeeCord}
- * channel do the moving part of this and never answer: a server name with a
- * typo in it sends the player nowhere and tells nobody. Here it is
- * {@link Reply.Status#REJECTED} with {@code no server "<name>"}.
+ * <p>Server names on the proxy are the backends' {@code server-id}s: that is
+ * what the memo is addressed by, and what an empty server resolves to.
  */
 public final class ConnectModule implements BridgeModule {
 
-    private final Platform platform;
+    /** The push a memo travels as. */
+    public static final String ARRIVE = "arrive";
 
-    public ConnectModule(@NotNull Platform platform) {
+    private final Platform platform;
+    private final Publisher publisher;
+
+    public ConnectModule(@NotNull Platform platform, @NotNull Publisher publisher) {
         this.platform = platform;
+        this.publisher = publisher;
     }
 
     @Override
@@ -55,7 +59,17 @@ public final class ConnectModule implements BridgeModule {
                 return CompletableFuture.completedFuture(Reply.rejected("not a player id: " + parts[1]));
             }
         }
+        if (who == null) {
+            return CompletableFuture.completedFuture(Reply.rejected("nobody to move: no uuid given"));
+        }
         String memo = parts.length > 2 && !parts[2].isEmpty() ? parts[2] : null;
-        return platform.connect(who, server, memo);
+        String target = server;
+        UUID moved = who;
+        return platform.connect(who, server).thenApply(reply -> {
+            if (reply.status() == Reply.Status.OK && memo != null) {
+                publisher.push(target, ARRIVE, moved, memo);
+            }
+            return reply;
+        });
     }
 }

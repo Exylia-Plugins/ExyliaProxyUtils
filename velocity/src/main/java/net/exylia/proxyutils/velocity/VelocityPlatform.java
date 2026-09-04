@@ -2,15 +2,11 @@ package net.exylia.proxyutils.velocity;
 
 import com.velocitypowered.api.proxy.Player;
 import com.velocitypowered.api.proxy.ProxyServer;
-import com.velocitypowered.api.proxy.ConnectionRequestBuilder;
 import com.velocitypowered.api.proxy.server.RegisteredServer;
-import com.velocitypowered.api.proxy.messages.MinecraftChannelIdentifier;
 import net.exylia.proxyutils.Platform;
 import net.exylia.proxyutils.ProxyPlayer;
 import net.exylia.proxyutils.Reply;
-import net.exylia.proxyutils.Wire;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 
 import java.util.Collection;
@@ -20,8 +16,6 @@ import java.util.concurrent.CompletableFuture;
 
 /** Velocity, seen through {@link Platform}. */
 final class VelocityPlatform implements Platform {
-
-    static final MinecraftChannelIdentifier CHANNEL = MinecraftChannelIdentifier.from(Wire.CHANNEL);
 
     private final ProxyServer server;
     private final Logger logger;
@@ -83,8 +77,7 @@ final class VelocityPlatform implements Platform {
     }
 
     @Override
-    public @NotNull CompletableFuture<Reply> connect(@NotNull UUID player, @NotNull String name,
-                                                     @Nullable String memo) {
+    public @NotNull CompletableFuture<Reply> connect(@NotNull UUID player, @NotNull String name) {
         RegisteredServer target = server.getServer(name).orElse(null);
         if (target == null) {
             return CompletableFuture.completedFuture(Reply.rejected("no server \"" + name + "\""));
@@ -93,32 +86,12 @@ final class VelocityPlatform implements Platform {
         if (who == null) {
             return CompletableFuture.completedFuture(Reply.rejected("player is not connected"));
         }
-        // The result completes once the player is on the other side, so the
-        // memo goes to the server they are on now, which is the new one.
         return who.createConnectionRequest(target).connect().thenApply(result -> switch (result.getStatus()) {
-            case SUCCESS -> arrived(who, memo, Reply.ok());
-            case ALREADY_CONNECTED -> arrived(who, memo, Reply.ok("already there"));
+            case SUCCESS -> Reply.ok();
+            case ALREADY_CONNECTED -> Reply.ok("already there");
             case CONNECTION_IN_PROGRESS -> Reply.rejected("already connecting somewhere");
             case CONNECTION_CANCELLED -> Reply.rejected("a proxy plugin cancelled the connection");
             case SERVER_DISCONNECTED -> Reply.rejected("server \"" + name + "\" refused the connection");
         });
-    }
-
-    private Reply arrived(Player who, @Nullable String memo, Reply reply) {
-        if (memo == null) {
-            return reply;
-        }
-        boolean delivered = who.getCurrentServer()
-                .map(connection -> connection.sendPluginMessage(CHANNEL, Wire.push("arrive", memo)))
-                .orElse(false);
-        return delivered ? reply : Reply.rejected("connected, but the destination could not be told where to put them");
-    }
-
-    @Override
-    public boolean reply(@NotNull UUID carrier, byte @NotNull [] data) {
-        return server.getPlayer(carrier)
-                .flatMap(Player::getCurrentServer)
-                .map(connection -> connection.sendPluginMessage(CHANNEL, data))
-                .orElse(false);
     }
 }

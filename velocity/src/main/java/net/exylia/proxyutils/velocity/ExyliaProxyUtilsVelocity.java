@@ -2,58 +2,52 @@ package net.exylia.proxyutils.velocity;
 
 import com.google.inject.Inject;
 import com.velocitypowered.api.event.Subscribe;
-import com.velocitypowered.api.event.connection.PluginMessageEvent;
 import com.velocitypowered.api.event.proxy.ProxyInitializeEvent;
+import com.velocitypowered.api.event.proxy.ProxyShutdownEvent;
 import com.velocitypowered.api.plugin.Plugin;
+import com.velocitypowered.api.plugin.annotation.DataDirectory;
 import com.velocitypowered.api.proxy.ProxyServer;
-import com.velocitypowered.api.proxy.ServerConnection;
-import net.exylia.proxyutils.Bridge;
+import net.exylia.proxyutils.BridgeConfig;
+import net.exylia.proxyutils.RedisBridge;
 import org.slf4j.Logger;
 
-/**
- * The Velocity half.
- *
- * <p>Registers the channel, hands every message on it to the {@link Bridge},
- * and keeps the channel off the client in both directions.
- */
+import java.nio.file.Path;
+
+/** The Velocity half: reads the config, opens the Redis bridge, closes it. */
 @Plugin(id = "exyliaproxyutils", name = "ExyliaProxyUtils", version = BuildConstants.VERSION,
-        description = "The proxy half of ExyliaLib: commands, and whatever comes next, over one channel.",
+        description = "The proxy half of ExyliaLib, over Redis: commands, teleports, lookups.",
         authors = {"Exylia"})
 public final class ExyliaProxyUtilsVelocity {
 
     private final ProxyServer server;
     private final Logger logger;
-    private Bridge bridge;
+    private final Path folder;
+    private RedisBridge bridge;
 
     @Inject
-    public ExyliaProxyUtilsVelocity(ProxyServer server, Logger logger) {
+    public ExyliaProxyUtilsVelocity(ProxyServer server, Logger logger, @DataDirectory Path folder) {
         this.server = server;
         this.logger = logger;
+        this.folder = folder;
     }
 
     @Subscribe
     public void onInit(ProxyInitializeEvent event) {
-        // Without this Velocity forwards the channel to the client untouched
-        // and never fires the event.
-        server.getChannelRegistrar().register(VelocityPlatform.CHANNEL);
-        bridge = Bridge.withBuiltIns(new VelocityPlatform(server, logger));
-        logger.info("ExyliaProxyUtils {} ready; modules: {}", BuildConstants.VERSION, bridge.modules());
+        try {
+            BridgeConfig config = BridgeConfig.load(folder);
+            bridge = RedisBridge.start(new VelocityPlatform(server, logger), config);
+            logger.info("ExyliaProxyUtils {} ready on Redis {}:{}; modules: {}", BuildConstants.VERSION,
+                    config.host(), config.port(), bridge.modules());
+        } catch (Exception failure) {
+            logger.error("ExyliaProxyUtils could not start; check {}/config.properties: {}",
+                    folder, failure.getMessage());
+        }
     }
 
     @Subscribe
-    public void onMessage(PluginMessageEvent event) {
-        if (!VelocityPlatform.CHANNEL.equals(event.getIdentifier())) {
-            return;
+    public void onShutdown(ProxyShutdownEvent event) {
+        if (bridge != null) {
+            bridge.close();
         }
-        // Ours in both directions: a client never sees bridge traffic, and
-        // bytes a client wrote on this channel never reach a module — the
-        // source check below is what stops a modified client from running
-        // console-proxy commands.
-        event.setResult(PluginMessageEvent.ForwardResult.handled());
-        if (!(event.getSource() instanceof ServerConnection from)) {
-            return;
-        }
-        bridge.receive(from.getPlayer().getUniqueId(), from.getPlayer().getUsername(),
-                from.getServerInfo().getName(), event.getData());
     }
 }
