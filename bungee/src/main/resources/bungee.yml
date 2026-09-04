@@ -1,0 +1,5 @@
+name: ExyliaProxyUtils
+main: net.exylia.proxyutils.bungee.ExyliaProxyUtilsBungee
+version: '${version}'
+author: Exylia
+description: The proxy half of ExyliaLib.

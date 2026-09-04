@@ -1,0 +1,2 @@
+// No proxy on the classpath, on purpose: everything the bridge decides —
+// framing, routing, what a module answers — is testable without either.

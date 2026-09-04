@@ -1,0 +1,66 @@
+// One jar for both proxies. Velocity reads velocity-plugin.json and ignores
+// bungee.yml; BungeeCord does the reverse; each main class is only ever loaded
+// by the proxy it was written for. The owner drops the same file in either.
+plugins {
+    id 'java'
+    id 'com.gradleup.shadow' version '8.3.9'
+}
+
+def outputDirectory = '/root/Java/jars'
+
+allprojects {
+    group = 'net.exylia'
+    version = '1.0.0'
+
+    repositories {
+        mavenCentral()
+        maven {
+            name = 'papermc-repo'
+            url = 'https://repo.papermc.io/repository/maven-public/'
+        }
+    }
+}
+
+subprojects {
+    apply plugin: 'java'
+
+    java {
+        toolchain.languageVersion = JavaLanguageVersion.of(21)
+    }
+
+    tasks.withType(JavaCompile).configureEach {
+        options.encoding = 'UTF-8'
+        options.release.set(21)
+    }
+
+    dependencies {
+        compileOnly 'org.jetbrains:annotations:26.0.2'
+        testImplementation 'org.junit.jupiter:junit-jupiter:5.11.4'
+        testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+    }
+
+    test {
+        useJUnitPlatform()
+    }
+}
+
+dependencies {
+    implementation project(':velocity')
+    implementation project(':bungee')
+}
+
+shadowJar {
+    archiveBaseName.set('ExyliaProxyUtils')
+    archiveClassifier.set('')
+    destinationDirectory = file("${outputDirectory}/plugins")
+}
+
+tasks.named('build') { dependsOn shadowJar }
+
+tasks.register('buildAll') {
+    group = 'build'
+    description = 'Cleans, tests and builds the universal proxy jar'
+    dependsOn clean, subprojects.collect { it.tasks.named('test') }, shadowJar
+}
+subprojects.each { it.tasks.matching { t -> t.name == 'test' || t.name == 'compileJava' }.configureEach { mustRunAfter rootProject.tasks.named('clean') } }
+shadowJar.mustRunAfter clean
