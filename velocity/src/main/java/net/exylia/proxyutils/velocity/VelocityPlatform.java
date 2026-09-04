@@ -6,11 +6,13 @@ import com.velocitypowered.api.proxy.ConnectionRequestBuilder;
 import com.velocitypowered.api.proxy.server.RegisteredServer;
 import com.velocitypowered.api.proxy.messages.MinecraftChannelIdentifier;
 import net.exylia.proxyutils.Platform;
+import net.exylia.proxyutils.ProxyPlayer;
 import net.exylia.proxyutils.Reply;
 import net.exylia.proxyutils.Wire;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 
+import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
@@ -59,6 +61,18 @@ final class VelocityPlatform implements Platform {
     @Override
     public @NotNull CompletableFuture<Boolean> runAsConsole(@NotNull String command) {
         return server.getCommandManager().executeAsync(server.getConsoleCommandSource(), command);
+    }
+
+    @Override
+    public @NotNull Optional<ProxyPlayer> find(@NotNull String nameOrId) {
+        Optional<Player> who;
+        try {
+            who = server.getPlayer(UUID.fromString(nameOrId));
+        } catch (IllegalArgumentException notAnId) {
+            who = server.getPlayer(nameOrId);
+        }
+        return who.map(player -> new ProxyPlayer(player.getUniqueId(), player.getUsername(),
+                player.getCurrentServer().map(c -> c.getServerInfo().getName()).orElse("")));
     }
 
     @Override

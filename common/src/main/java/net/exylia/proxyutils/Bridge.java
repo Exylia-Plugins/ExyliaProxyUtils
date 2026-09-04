@@ -2,6 +2,7 @@ package net.exylia.proxyutils;
 
 import net.exylia.proxyutils.module.CommandsModule;
 import net.exylia.proxyutils.module.ConnectModule;
+import net.exylia.proxyutils.module.PlayerModule;
 import net.exylia.proxyutils.module.PingModule;
 import org.jetbrains.annotations.NotNull;
 
@@ -31,12 +32,13 @@ public final class Bridge {
         this.platform = platform;
     }
 
-    /** A bridge with the modules ExyliaLib expects: {@code ping}, {@code commands} and {@code connect}. */
+    /** A bridge with the modules ExyliaLib expects: {@code ping}, {@code commands}, {@code connect} and {@code player}. */
     public static @NotNull Bridge withBuiltIns(@NotNull Platform platform) {
         Bridge bridge = new Bridge(platform);
         bridge.register(new PingModule(platform));
         bridge.register(new CommandsModule(platform));
         bridge.register(new ConnectModule(platform));
+        bridge.register(new PlayerModule(platform));
         return bridge;
     }
 

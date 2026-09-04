@@ -46,6 +46,13 @@ class BridgeTest {
         }
 
         @Override
+        public java.util.Optional<ProxyPlayer> find(String nameOrId) {
+            boolean steve = nameOrId.equalsIgnoreCase("steve") || nameOrId.equals(STEVE.toString());
+            return steve ? java.util.Optional.of(new ProxyPlayer(STEVE, "Steve", "lobby"))
+                    : java.util.Optional.empty();
+        }
+
+        @Override
         public CompletableFuture<Reply> connect(UUID player, String server) {
             ran.add("connect " + player + " -> " + server);
             return CompletableFuture.completedFuture(
@@ -128,6 +135,19 @@ class BridgeTest {
         Answer reply = answer(proxy.replies.get(3));
         assertEquals(1, reply.status());
         assertTrue(reply.detail().startsWith("no server"), reply.detail());
+    }
+
+    @Test
+    @DisplayName("player finds by name or id and answers uuid|name|server, or rejects")
+    void player() throws IOException {
+        FakePlatform proxy = new FakePlatform();
+        Bridge bridge = Bridge.withBuiltIns(proxy);
+        bridge.receive(STEVE, "Steve", "lobby", request("player", 11, "STEVE"));
+        bridge.receive(STEVE, "Steve", "lobby", request("player", 12, STEVE.toString()));
+        bridge.receive(STEVE, "Steve", "lobby", request("player", 13, "Nobody"));
+        assertEquals(new Answer("player", 11, 0, STEVE + "|Steve|lobby"), answer(proxy.replies.get(0)));
+        assertEquals(0, answer(proxy.replies.get(1)).status());
+        assertEquals(1, answer(proxy.replies.get(2)).status());
     }
 
     @Test

@@ -1,6 +1,7 @@
 package net.exylia.proxyutils.bungee;
 
 import net.exylia.proxyutils.Platform;
+import net.exylia.proxyutils.ProxyPlayer;
 import net.exylia.proxyutils.Reply;
 import net.exylia.proxyutils.Wire;
 import net.md_5.bungee.api.ProxyServer;
@@ -9,6 +10,7 @@ import net.md_5.bungee.api.connection.ProxiedPlayer;
 import net.md_5.bungee.api.connection.Server;
 import org.jetbrains.annotations.NotNull;
 
+import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.logging.Logger;
@@ -58,6 +60,22 @@ final class BungeePlatform implements Platform {
     public @NotNull CompletableFuture<Boolean> runAsConsole(@NotNull String command) {
         return CompletableFuture.completedFuture(
                 proxy.getPluginManager().dispatchCommand(proxy.getConsole(), command));
+    }
+
+    @Override
+    public @NotNull Optional<ProxyPlayer> find(@NotNull String nameOrId) {
+        ProxiedPlayer who;
+        try {
+            who = proxy.getPlayer(UUID.fromString(nameOrId));
+        } catch (IllegalArgumentException notAnId) {
+            who = proxy.getPlayer(nameOrId);
+        }
+        if (who == null) {
+            return Optional.empty();
+        }
+        Server current = who.getServer();
+        return Optional.of(new ProxyPlayer(who.getUniqueId(), who.getName(),
+                current == null ? "" : current.getInfo().getName()));
     }
 
     @Override

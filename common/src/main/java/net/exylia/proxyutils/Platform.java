@@ -2,6 +2,7 @@ package net.exylia.proxyutils;
 
 import org.jetbrains.annotations.NotNull;
 
+import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
@@ -40,6 +41,14 @@ public interface Platform {
      * @return whether the proxy found and ran the command
      */
     @NotNull CompletableFuture<Boolean> runAsConsole(@NotNull String command);
+
+    /**
+     * Finds a connected player by name or by id.
+     *
+     * @param nameOrId a name, matched the way the proxy matches names, or a uuid
+     * @return the player and their server, or empty if nobody by that is connected
+     */
+    @NotNull Optional<ProxyPlayer> find(@NotNull String nameOrId);
 
     /**
      * Moves a player to a server.
