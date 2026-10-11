@@ -4,6 +4,7 @@ import net.exylia.proxyutils.Platform;
 import net.exylia.proxyutils.ProxyPlayer;
 import net.exylia.proxyutils.Reply;
 import net.md_5.bungee.api.ProxyServer;
+import net.md_5.bungee.api.chat.TextComponent;
 import net.md_5.bungee.api.config.ServerInfo;
 import net.md_5.bungee.api.connection.ProxiedPlayer;
 import net.md_5.bungee.api.connection.Server;
@@ -21,7 +22,6 @@ final class BungeePlatform implements Platform {
     private final ProxyServer proxy;
     private final Logger logger;
     private final String version;
-
 
     BungeePlatform(ProxyServer proxy, Logger logger, String version) {
         this.proxy = proxy;
@@ -105,5 +105,16 @@ final class BungeePlatform implements Platform {
                     : connected ? Reply.ok() : Reply.rejected("the proxy did not connect them"));
         });
         return done;
+    }
+
+    /** BungeeCord speaks §-codes; the MiniMessage screen is for Velocity. */
+    @Override
+    public boolean disconnect(@NotNull UUID player, @NotNull String mini, @NotNull String legacy) {
+        ProxiedPlayer who = proxy.getPlayer(player);
+        if (who == null) {
+            return false;
+        }
+        who.disconnect(TextComponent.fromLegacy(legacy.isBlank() ? mini : legacy));
+        return true;
     }
 }

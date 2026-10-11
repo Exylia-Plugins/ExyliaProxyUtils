@@ -62,6 +62,12 @@ class BridgeTest {
         }
 
         @Override
+        public boolean disconnect(UUID player, String mini, String legacy) {
+            ran.add("kick " + player + " mini=" + mini + " legacy=" + legacy);
+            return player.equals(STEVE);
+        }
+
+        @Override
         public void push(String server, String module, UUID carrier, String payload) {
             pushes.add(server + " <- " + module + " " + carrier + " " + payload);
         }
@@ -89,6 +95,17 @@ class BridgeTest {
         assertEquals("arrive|0|0|" + STEVE + "|player:abc", Frames.push("arrive", STEVE, "player:abc"));
         assertThrows(IllegalArgumentException.class, () -> Frames.decode("garbage"));
         assertEquals("exylia:bridge:lobby", Frames.channelOf("exylia", "lobby"));
+    }
+
+    @Test
+    @DisplayName("kick splits on the first two pipes and rejects a player who is not connected")
+    void kick() {
+        FakePlatform proxy = new FakePlatform();
+        Bridge bridge = Bridge.withBuiltIns(proxy, proxy);
+        assertEquals(Reply.ok(), ask(proxy, bridge, null, "kick", STEVE + "|<red>Banned|§cBanned | for |x"));
+        assertEquals("kick " + STEVE + " mini=<red>Banned legacy=§cBanned | for |x", proxy.ran.get(0));
+        assertEquals(Reply.rejected("not connected"), ask(proxy, bridge, null, "kick", ALEX + "|a|b"));
+        assertEquals(Reply.Status.REJECTED, ask(proxy, bridge, null, "kick", "nobody|a|b").status());
     }
 
     @Test

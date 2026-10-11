@@ -2,6 +2,7 @@ package net.exylia.proxyutils;
 
 import net.exylia.proxyutils.module.CommandsModule;
 import net.exylia.proxyutils.module.ConnectModule;
+import net.exylia.proxyutils.module.KickModule;
 import net.exylia.proxyutils.module.PingModule;
 import net.exylia.proxyutils.module.PlayerModule;
 import net.exylia.proxyutils.module.PlayersModule;
@@ -34,7 +35,7 @@ public final class Bridge {
 
     /**
      * A bridge with the modules ExyliaLib expects: {@code ping},
-     * {@code commands}, {@code connect}, {@code player} and {@code players}.
+     * {@code commands}, {@code connect}, {@code player}, {@code players} and {@code kick}.
      */
     public static @NotNull Bridge withBuiltIns(@NotNull Platform platform, @NotNull Publisher publisher) {
         Bridge bridge = new Bridge(platform);
@@ -43,6 +44,7 @@ public final class Bridge {
         bridge.register(new ConnectModule(platform, publisher));
         bridge.register(new PlayerModule(platform));
         bridge.register(new PlayersModule(platform));
+        bridge.register(new KickModule(platform));
         return bridge;
     }
 

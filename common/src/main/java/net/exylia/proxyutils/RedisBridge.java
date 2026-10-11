@@ -1,5 +1,10 @@
 package net.exylia.proxyutils;
 
+import net.exylia.proxyutils.module.PunishImportModule;
+import net.exylia.proxyutils.module.PunishSourcesModule;
+import net.exylia.proxyutils.punish.BanMirror;
+import net.exylia.proxyutils.punish.PunishStream;
+import net.exylia.proxyutils.punish.Punishments;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import redis.clients.jedis.DefaultJedisClientConfig;
@@ -25,6 +30,10 @@ import java.util.UUID;
  * Publishing comes from a pool. The subscription cannot: {@code SUBSCRIBE}
  * takes over its connection for as long as it listens, so it gets one of its
  * own on its own thread, with no read timeout, re-subscribing when it drops.
+ *
+ * <p>The same pool also carries the punishment side: {@link #punishments()} writes what the ban
+ * plugins on this proxy do to {@code <prefix>:punish:external}, and {@link #mirror()} reads
+ * ExyliaStaff's bans at login.
  */
 public final class RedisBridge implements Publisher, AutoCloseable {
 
@@ -38,6 +47,8 @@ public final class RedisBridge implements Publisher, AutoCloseable {
     private final HostAndPort address;
     private final DefaultJedisClientConfig config;
     private final Thread listener;
+    private final Punishments punishments;
+    private final BanMirror mirror;
     private volatile boolean running = true;
     private volatile @Nullable Jedis listening;
 
@@ -49,6 +60,10 @@ public final class RedisBridge implements Publisher, AutoCloseable {
         this.address = address;
         this.config = config;
         this.bridge = Bridge.withBuiltIns(platform, this);
+        this.punishments = new Punishments(platform, new PunishStream(platform, pool, prefix));
+        this.mirror = new BanMirror(platform, pool, prefix);
+        bridge.register(new PunishSourcesModule(punishments));
+        bridge.register(new PunishImportModule(punishments));
         this.listener = new Thread(this::listen, "ExyliaProxyUtils-Redis");
         this.listener.setDaemon(true);
     }
@@ -92,6 +107,16 @@ public final class RedisBridge implements Publisher, AutoCloseable {
     /** The modules servers can address. */
     public @NotNull java.util.Set<String> modules() {
         return bridge.modules();
+    }
+
+    /** The ban plugins hooked on this proxy, and the stream they write to. */
+    public @NotNull Punishments punishments() {
+        return punishments;
+    }
+
+    /** ExyliaStaff's bans, for the login check. */
+    public @NotNull BanMirror mirror() {
+        return mirror;
     }
 
     /** Adds a module; see {@link Bridge#register}. */
@@ -168,6 +193,8 @@ public final class RedisBridge implements Publisher, AutoCloseable {
 
     @Override
     public void close() {
+        punishments.close();
+        punishments.stream().close();
         running = false;
         Jedis open = listening;
         if (open != null) {

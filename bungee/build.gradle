@@ -1,6 +1,10 @@
 dependencies {
     implementation project(':common')
     compileOnly 'net.md-5:bungeecord-api:1.21-R0.3'
+    compileOnly('com.github.DevLeoko.AdvancedBan:AdvancedBan-Core:v2.3.0') { transitive = false }
+    compileOnly('com.github.DevLeoko.AdvancedBan:AdvancedBan-Bungee:v2.3.0') { transitive = false }
+    compileOnly('me.confuser.banmanager:BanManagerCommon:7.10.0') { transitive = false }
+    compileOnly('me.confuser.banmanager:BanManagerBungee:7.10.0') { transitive = false }
 }
 
 processResources {

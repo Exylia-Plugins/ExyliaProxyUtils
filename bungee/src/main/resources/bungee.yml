@@ -3,3 +3,5 @@ main: net.exylia.proxyutils.bungee.ExyliaProxyUtilsBungee
 version: '${version}'
 author: Exylia
 description: The proxy half of ExyliaLib.
+# Loaded after these when present, so their APIs are up when the hooks look for them.
+softdepends: [LiteBans, LibertyBans, AdvancedBan, BanManager]

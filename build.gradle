@@ -18,6 +18,11 @@ allprojects {
             name = 'papermc-repo'
             url = 'https://repo.papermc.io/repository/maven-public/'
         }
+        // LiteBans API and AdvancedBan.
+        maven { url = 'https://jitpack.io' }
+        // LibertyBans and its event bus, Omnibus.
+        maven { url = 'https://mvn-repo.arim.space/affero-gpl3/' }
+        maven { url = 'https://mvn-repo.arim.space/lesser-gpl3/' }
     }
 }
 

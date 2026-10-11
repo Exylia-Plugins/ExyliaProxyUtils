@@ -4,4 +4,10 @@ dependencies {
     // Shaded and relocated into the universal jar by the root project; the
     // same version ExyliaLib installs on the backends.
     implementation 'redis.clients:jedis:5.1.0'
+    // The ban plugins the proxy may have. compileOnly: none of them ships in
+    // the jar, and nothing touches their classes unless they are installed.
+    compileOnly 'com.gitlab.ruany:LiteBansAPI:0.6.1'
+    compileOnly 'space.arim.libertybans:bans-api:1.1.1'
+    compileOnly 'space.arim.omnibus:omnibus:1.1.0-RC2'
+    compileOnly('me.confuser.banmanager:BanManagerCommon:7.10.0') { transitive = false }
 }

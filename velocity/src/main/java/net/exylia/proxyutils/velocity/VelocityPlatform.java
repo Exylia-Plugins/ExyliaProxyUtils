@@ -6,6 +6,9 @@ import com.velocitypowered.api.proxy.server.RegisteredServer;
 import net.exylia.proxyutils.Platform;
 import net.exylia.proxyutils.ProxyPlayer;
 import net.exylia.proxyutils.Reply;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.minimessage.MiniMessage;
+import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 
@@ -93,5 +96,24 @@ final class VelocityPlatform implements Platform {
             case CONNECTION_CANCELLED -> Reply.rejected("a proxy plugin cancelled the connection");
             case SERVER_DISCONNECTED -> Reply.rejected("server \"" + name + "\" refused the connection");
         });
+    }
+
+    @Override
+    public boolean disconnect(@NotNull UUID player, @NotNull String mini, @NotNull String legacy) {
+        Player who = server.getPlayer(player).orElse(null);
+        if (who == null) {
+            return false;
+        }
+        who.disconnect(screen(mini, legacy));
+        return true;
+    }
+
+    /** The MiniMessage screen; the §-coded one when a server sent only that. */
+    static @NotNull Component screen(@NotNull String mini, @NotNull String legacy) {
+        if (!mini.isBlank()) {
+            return MiniMessage.miniMessage().deserialize(mini);
+        }
+        return LegacyComponentSerializer.legacySection().deserialize(
+                legacy.isBlank() ? "You are banned from this network." : legacy);
     }
 }

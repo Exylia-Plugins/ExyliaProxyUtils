@@ -65,4 +65,13 @@ public interface Platform {
      *         was refused; a player who is gone is {@code REJECTED} too
      */
     @NotNull CompletableFuture<Reply> connect(@NotNull UUID player, @NotNull String server);
+
+    /**
+     * Disconnects a player from the network with a screen.
+     *
+     * @param mini   the screen in MiniMessage, what Velocity shows
+     * @param legacy the screen in §-codes, what BungeeCord shows
+     * @return false for a player who is not connected
+     */
+    boolean disconnect(@NotNull UUID player, @NotNull String mini, @NotNull String legacy);
 }

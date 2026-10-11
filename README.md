@@ -42,11 +42,69 @@ payload means.
 | `connect` | `<server>\|<uuid>\|<memo>`, the last two optional: empty server = the one asking, empty uuid = the player the request is about | `OK` once connected (or already there); `REJECTED` starting with `no server "<name>"` for a name the proxy does not know, or with the reason the connection was refused. A memo is sent to the destination server as an `arrive` **push** once the proxy has connected the player; ExyliaLib's cross-server teleports send the destination this way. |
 | `player` | a name or a uuid | `OK` with `uuid\|name\|server` for a connected player (server empty while between servers); `REJECTED` otherwise. |
 | `players` | ignored | `OK` with every connected name, comma-separated. ExyliaLib asks every 10 s and keeps the answer for tab completion. |
+| `kick` | `<uuid>\|<mini>\|<legacy>`, split on the first two pipes (the legacy screen may hold more) | `OK` once the player was disconnected, with the MiniMessage screen on Velocity and the §-coded one on BungeeCord; `REJECTED not connected` otherwise. ExyliaStaff kicks and bans players on other servers this way. |
+| `punish-sources` | ignored | `OK` with the ban plugins installed on this proxy, comma-separated origins (`LITEBANS,LIBERTYBANS`), empty for none. |
+| `punish-import` | an origin: `LITEBANS`, `LIBERTYBANS`, `ADVANCEDBAN` or `BANMANAGER` | `OK started <ORIGIN>`, and that plugin's whole history goes into the punishment stream on a thread of its own, with `import:true`, logging its progress every 1000 entries and the total at the end; `REJECTED <ORIGIN> not installed` (or `... import already running`). |
 
 On the Paper side these are the `player-proxy:` and `console-proxy:` prefixes
 every Exylia plugin already accepts in its command lists, the cross-server
 teleports, and `net.exylia.lib.proxy.Proxy.request(module, payload)` for
 anything else.
+
+## Punishments
+
+ExyliaStaff owns punishments; the proxy carries the part only the proxy can
+see, over the same Redis and `key-prefix`.
+
+### Ban plugins on the proxy
+
+When one of these is installed on the proxy, every punishment made through it
+(a plain `/ban` included, and every removal) is written to the stream below.
+Each hook checks the plugin is there before touching any of its classes, so
+none is needed; they are soft dependencies, loaded first when present.
+
+| Plugin | Velocity | BungeeCord | `originId` |
+| --- | --- | --- | --- |
+| LiteBans | yes | yes | `ban:<id>`, `mute:<id>`, `warn:<id>`, `kick:<id>` |
+| LibertyBans | yes | yes | `<id>` |
+| AdvancedBan | no build exists | yes | `<id>`; a live kick (AdvancedBan gives kicks no id) `kick:<uuid>:<start>`; an import's history-only entry `history:<id>` |
+| BanManager | yes | yes | `ban:<id>`, `mute:<id>`, `warn:<id>`, `kick:<id>`; an import's lifted bans and mutes `banrecord:<id>`, `muterecord:<id>` |
+
+Entries that name no player (address-only bans) are skipped: the stream's
+`target` is always a uuid. Names the plugin does not keep (LibertyBans keeps
+none) are filled from whoever is online, else null.
+
+### Stream `<prefix>:punish:external`
+
+`XADD <prefix>:punish:external MAXLEN ~ 200000 * json <json>`, read by
+ExyliaStaff with the consumer group `exyliastaff`. Live entries go through one
+writer thread, so a ban plugin's thread never waits on Redis and a removal
+never overtakes its punishment; a write is tried three times, and one that
+still fails is logged with its JSON.
+
+```json
+{"v":1,"kind":"added","origin":"LITEBANS","originId":"ban:123","type":"TEMPBAN",
+ "target":"<uuid>","targetName":"Steve","staff":null,"staffName":"Console",
+ "reason":"max 255","server":"proxy","created":1730000000000,"expires":1730086400000,
+ "removedAt":0,"removedBy":null,"removeReason":null,"import":false}
+```
+
+`kind` is `added` or `removed`; `type` one of `BAN TEMPBAN IPBAN MUTE TEMPMUTE
+WARN KICK`; times are epoch ms, 0 for never; `server` is the plugin's own
+origin server when it keeps one, else `proxy`. An import writes an active
+punishment as `added` and a lifted or expired one as `added` then `removed`.
+
+### Native ban mirror
+
+ExyliaStaff keeps its own active bans in Redis:
+`<prefix>:punish:ban:<uuid lowercase>` and
+`<prefix>:punish:ipban:<sha256 hex of the address as text, e.g. "1.2.3.4">`,
+each `{"id":123,"type":"BAN","expires":0,"mini":"...","legacy":"..."}`. At
+login (Velocity `LoginEvent`, BungeeCord `LoginEvent`, both off the network
+thread) the proxy reads the uuid key, then the address key, and turns the
+player away with `mini` (Velocity) or `legacy` (BungeeCord) unless `expires`
+has passed. Redis down lets the player in, with a warning at most once a
+minute: the backends check their own database too.
 
 ## Wire
 
@@ -85,8 +143,9 @@ future for anything slow.
 
 ```
 common/    Bridge, BridgeModule, Platform, Publisher, Request, Reply, Frames, RedisBridge, BridgeConfig, module/
-velocity/  @Plugin main + VelocityPlatform
-bungee/    Plugin main + BungeePlatform, bungee.yml
+           punish/: the stream, the ban mirror, LiteBans, LibertyBans and BanManager (shared part)
+velocity/  @Plugin main + VelocityPlatform, BanManager's Velocity events
+bungee/    Plugin main + BungeePlatform, AdvancedBan, BanManager's BungeeCord events, bungee.yml
 ```
 
 `./gradlew buildAll` tests `common` and writes the universal jar (Jedis
