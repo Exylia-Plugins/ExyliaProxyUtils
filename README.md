@@ -11,12 +11,21 @@ redis.port=6379
 redis.password=
 redis.database=0
 redis.key-prefix=exylia
+updates.enabled=true
 ```
 
 The same values every backend has under `database.redis` in
 `plugins/ExyliaLib/database.yml`, with the same `key-prefix`. **Server names
 on the proxy must equal the backends' `server-id`s**: that is the address an
 answer goes back to, and the name a `connect` moves a player to.
+
+## Updates
+
+Every push to `main` with a new version in `build.gradle` publishes a GitHub
+release. The proxy checks for one when it starts and when it stops: a newer
+release of the same major replaces the jar in `plugins/` and loads on the
+next restart. A new major version is only logged, to install by hand.
+`updates.enabled=false` turns this off.
 
 ## Why Redis and not plugin messages
 

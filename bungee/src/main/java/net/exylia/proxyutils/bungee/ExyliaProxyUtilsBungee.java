@@ -2,6 +2,7 @@ package net.exylia.proxyutils.bungee;
 
 import net.exylia.proxyutils.BridgeConfig;
 import net.exylia.proxyutils.RedisBridge;
+import net.exylia.proxyutils.Updater;
 import net.exylia.proxyutils.punish.BanManagerSource;
 import net.exylia.proxyutils.punish.LibertyBansSource;
 import net.exylia.proxyutils.punish.LiteBansSource;
@@ -23,12 +24,17 @@ import java.net.SocketAddress;
 public final class ExyliaProxyUtilsBungee extends Plugin implements Listener {
 
     private RedisBridge bridge;
+    private BungeePlatform updates;
 
     @Override
     public void onEnable() {
         try {
             BridgeConfig config = BridgeConfig.load(getDataFolder().toPath());
             BungeePlatform platform = new BungeePlatform(getProxy(), getLogger(), getDescription().getVersion());
+            if (config.updates()) {
+                updates = platform;
+                getProxy().getScheduler().runAsync(this, () -> Updater.check(platform));
+            }
             bridge = RedisBridge.start(platform, config);
             Punishments punishments = bridge.punishments();
             punishments.install(LiteBansSource.ORIGIN, () -> LiteBansSource.install(platform, punishments.stream()));
@@ -73,6 +79,10 @@ public final class ExyliaProxyUtilsBungee extends Plugin implements Listener {
     public void onDisable() {
         if (bridge != null) {
             bridge.close();
+        }
+        // Inline: a release published while the proxy ran is installed before it exits.
+        if (updates != null) {
+            Updater.check(updates);
         }
     }
 }

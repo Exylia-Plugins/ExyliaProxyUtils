@@ -14,6 +14,7 @@ import com.velocitypowered.api.plugin.annotation.DataDirectory;
 import com.velocitypowered.api.proxy.ProxyServer;
 import net.exylia.proxyutils.BridgeConfig;
 import net.exylia.proxyutils.RedisBridge;
+import net.exylia.proxyutils.Updater;
 import net.exylia.proxyutils.punish.BanManagerSource;
 import net.exylia.proxyutils.punish.LibertyBansSource;
 import net.exylia.proxyutils.punish.LiteBansSource;
@@ -40,6 +41,7 @@ public final class ExyliaProxyUtilsVelocity {
     private final Logger logger;
     private final Path folder;
     private RedisBridge bridge;
+    private VelocityPlatform updates;
 
     @Inject
     public ExyliaProxyUtilsVelocity(ProxyServer server, Logger logger, @DataDirectory Path folder) {
@@ -53,6 +55,10 @@ public final class ExyliaProxyUtilsVelocity {
         try {
             BridgeConfig config = BridgeConfig.load(folder);
             VelocityPlatform platform = new VelocityPlatform(server, logger);
+            if (config.updates()) {
+                updates = platform;
+                server.getScheduler().buildTask(this, () -> Updater.check(platform)).schedule();
+            }
             bridge = RedisBridge.start(platform, config);
             Punishments punishments = bridge.punishments();
             punishments.install(LiteBansSource.ORIGIN, () -> LiteBansSource.install(platform, punishments.stream()));
@@ -87,6 +93,10 @@ public final class ExyliaProxyUtilsVelocity {
     public void onShutdown(ProxyShutdownEvent event) {
         if (bridge != null) {
             bridge.close();
+        }
+        // Inline: a release published while the proxy ran is installed before it exits.
+        if (updates != null) {
+            Updater.check(updates);
         }
     }
 }

@@ -6,11 +6,12 @@ plugins {
     id 'com.gradleup.shadow' version '8.3.9'
 }
 
-def outputDirectory = '/root/Java/jars'
+// CI passes -PjarsDir=build/release; locally the jar lands with every other plugin.
+def outputDirectory = findProperty('jarsDir') ?: '/root/Java/jars'
 
 allprojects {
     group = 'net.exylia'
-    version = '2.0.1'
+    version = '2.0.2'
 
     repositories {
         mavenCentral()

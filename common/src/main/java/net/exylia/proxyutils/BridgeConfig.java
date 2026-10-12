@@ -20,9 +20,10 @@ import java.util.Properties;
  * @param password  the password, empty for none
  * @param database  which numbered database
  * @param keyPrefix what every key and channel of the network starts with
+ * @param updates   whether new releases install themselves on restart (see {@link Updater})
  */
 public record BridgeConfig(@NotNull String host, int port, @NotNull String password, int database,
-                           @NotNull String keyPrefix) {
+                           @NotNull String keyPrefix, boolean updates) {
 
     private static final String FILE = "config.properties";
 
@@ -41,6 +42,8 @@ public record BridgeConfig(@NotNull String host, int port, @NotNull String passw
                     redis.password=
                     redis.database=0
                     redis.key-prefix=exylia
+                    # New releases download at start and stop and load on the next restart.
+                    updates.enabled=true
                     """);
         }
         Properties values = new Properties();
@@ -53,6 +56,7 @@ public record BridgeConfig(@NotNull String host, int port, @NotNull String passw
                 Integer.parseInt(values.getProperty("redis.port", "6379").trim()),
                 values.getProperty("redis.password", ""),
                 Integer.parseInt(values.getProperty("redis.database", "0").trim()),
-                prefix.isEmpty() ? "exylia" : prefix);
+                prefix.isEmpty() ? "exylia" : prefix,
+                !values.getProperty("updates.enabled", "true").trim().equalsIgnoreCase("false"));
     }
 }
