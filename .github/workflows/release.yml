@@ -17,6 +17,9 @@ permissions:
 jobs:
   release:
     runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      needed: ${{ steps.version.outputs.needed }}
     steps:
       - uses: actions/checkout@v4
 
@@ -61,3 +64,16 @@ jobs:
           cp "$jar" build/release/plugins/ExyliaProxyUtils.jar
           gh release create "v${VERSION}" "$jar" build/release/plugins/ExyliaProxyUtils.jar \
             --target "$GITHUB_SHA" --title "ExyliaProxyUtils ${VERSION}" --generate-notes
+
+  # Mirrors the release above to Modrinth; skipped while MODRINTH_TOKEN or the project id is unset.
+  modrinth:
+    needs: release
+    if: needs.release.outputs.needed == 'true'
+    uses: Exylia-Plugins/.github/.github/workflows/modrinth.yml@main
+    with:
+      version: ${{ needs.release.outputs.version }}
+      name: ExyliaProxyUtils
+      project-id: ${{ vars.MODRINTH_PROJECT_ID }}
+      loaders: '["velocity","bungeecord","waterfall"]'
+      dependencies: '[{"project_id":"PgXAUxLZ","dependency_type":"optional"}]'
+    secrets: inherit
