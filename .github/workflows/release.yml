@@ -77,3 +77,14 @@ jobs:
       loaders: '["velocity","bungeecord","waterfall"]'
       dependencies: '[{"project_id":"PgXAUxLZ","dependency_type":"optional"}]'
     secrets: inherit
+
+  # Mirrors the release above to BuiltByBit; skipped while BUILTBYBIT_TOKEN or the resource id is unset.
+  builtbybit:
+    needs: release
+    if: needs.release.outputs.needed == 'true'
+    uses: Exylia-Plugins/.github/.github/workflows/builtbybit.yml@main
+    with:
+      version: ${{ needs.release.outputs.version }}
+      name: ExyliaProxyUtils
+      resource-id: ${{ vars.BBB_RESOURCE_ID }}
+    secrets: inherit
