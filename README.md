@@ -9,13 +9,19 @@ with the network's Redis, restart.
 redis.host=10.0.0.6
 redis.port=6379
 redis.password=
+redis.username=
+redis.ssl=false
 redis.database=0
 redis.key-prefix=exylia
 updates.enabled=true
 ```
 
 The same values every backend has under `database.redis` in
-`plugins/ExyliaLib/database.yml`, with the same `key-prefix`. **Server names
+`plugins/ExyliaLib/database.yml`, with the same `key-prefix`. `redis.username` is an ACL user (Redis 6+), empty
+for the default one; `redis.ssl=true` connects over TLS (`rediss://`) to a Redis
+that has it on, with a certificate Java trusts, and needs ExyliaLib 1.484.0+ on
+the backends with `database.redis.ssl: true`. A file written by an older
+version lacks both keys and keeps the old behaviour until they are added. **Server names
 on the proxy must equal the backends' `server-id`s**: that is the address an
 answer goes back to, and the name a `connect` moves a player to.
 

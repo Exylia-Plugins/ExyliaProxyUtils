@@ -87,7 +87,11 @@ public final class RedisBridge implements Publisher, AutoCloseable {
                 .connectionTimeoutMillis(TIMEOUT_MILLIS)
                 .socketTimeoutMillis(TIMEOUT_MILLIS)
                 .database(settings.database())
-                .clientName("exylia-proxyutils");
+                .clientName("exylia-proxyutils")
+                .ssl(settings.ssl());
+        if (!settings.username().isEmpty()) {
+            config.user(settings.username());
+        }
         if (!settings.password().isEmpty()) {
             config.password(settings.password());
         }

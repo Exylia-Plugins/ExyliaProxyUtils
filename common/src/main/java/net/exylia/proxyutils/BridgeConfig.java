@@ -18,11 +18,14 @@ import java.util.Properties;
  * @param host      the Redis host
  * @param port      the port
  * @param password  the password, empty for none
+ * @param username  the ACL user, empty for the default user
+ * @param ssl       whether to connect over TLS
  * @param database  which numbered database
  * @param keyPrefix what every key and channel of the network starts with
  * @param updates   whether new releases install themselves on restart (see {@link Updater})
  */
-public record BridgeConfig(@NotNull String host, int port, @NotNull String password, int database,
+public record BridgeConfig(@NotNull String host, int port, @NotNull String password,
+                           @NotNull String username, boolean ssl, int database,
                            @NotNull String keyPrefix, boolean updates) {
 
     private static final String FILE = "config.properties";
@@ -40,6 +43,10 @@ public record BridgeConfig(@NotNull String host, int port, @NotNull String passw
                     redis.host=localhost
                     redis.port=6379
                     redis.password=
+                    # ACL user (Redis 6+), empty for the default user.
+                    redis.username=
+                    # true for a Redis with TLS on (rediss://), like the backends' database.redis.ssl.
+                    redis.ssl=false
                     redis.database=0
                     redis.key-prefix=exylia
                     # New releases download at start and stop and load on the next restart.
@@ -55,6 +62,8 @@ public record BridgeConfig(@NotNull String host, int port, @NotNull String passw
                 values.getProperty("redis.host", "localhost").trim(),
                 Integer.parseInt(values.getProperty("redis.port", "6379").trim()),
                 values.getProperty("redis.password", ""),
+                values.getProperty("redis.username", "").trim(),
+                values.getProperty("redis.ssl", "false").trim().equalsIgnoreCase("true"),
                 Integer.parseInt(values.getProperty("redis.database", "0").trim()),
                 prefix.isEmpty() ? "exylia" : prefix,
                 !values.getProperty("updates.enabled", "true").trim().equalsIgnoreCase("false"));
