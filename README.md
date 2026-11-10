@@ -25,6 +25,33 @@ version lacks both keys and keeps the old behaviour until they are added. **Serv
 on the proxy must equal the backends' `server-id`s**: that is the address an
 answer goes back to, and the name a `connect` moves a player to.
 
+## Without Redis: `transport=database` (since 2.3.0)
+
+A network whose backends share a database but run no Redis sets
+`cross-server: database` in their `database.yml` (ExyliaLib 1.555.0+), and the
+proxy follows with the same database:
+
+```properties
+transport=database
+database.type=mysql        # mysql, mariadb, postgresql or mongodb
+database.host=10.0.0.5
+database.port=0            # 0: the engine's default
+database.name=network
+database.username=exylia
+database.password=...
+database.connection-string= # mongodb only, wins over the fields
+redis.key-prefix=exylia    # still names the network
+```
+
+Everything works the same over it (requests, pushes, the ban mirror and the
+punishment stream), through the tables ExyliaLib's database bus keeps
+(`exylia_bus_*`). Messages take up to a quarter of a second (PostgreSQL wakes
+at once through `LISTEN/NOTIFY`), and every server polls the database a few
+times a second, so Redis stays the recommended setup. A file from before 2.3.0
+gets the section appended with `transport=redis` and keeps working as it did.
+The MariaDB driver (which also speaks MySQL), PostgreSQL's and MongoDB's are
+shaded and relocated in the jar.
+
 ## Updates
 
 Every push to `main` with a new version in `build.gradle` publishes a GitHub
@@ -159,10 +186,11 @@ future for anything slow.
 
 ```
 common/    Bridge, BridgeModule, Platform, Publisher, Request, Reply, Frames, RedisBridge, BridgeConfig, module/
+           wire/: Wire, RedisWire, and the database wire (PollingWire, SqlWire, MongoWire)
            punish/: the stream, the ban mirror, LiteBans, LibertyBans and BanManager (shared part)
 velocity/  @Plugin main + VelocityPlatform, BanManager's Velocity events
 bungee/    Plugin main + BungeePlatform, AdvancedBan, BanManager's BungeeCord events, bungee.yml
 ```
 
-`./gradlew buildAll` tests `common` and writes the universal jar (Jedis
-shaded and relocated) to `/root/Java/jars/plugins/`. Java 21.
+`./gradlew buildAll` tests `common` and writes the universal jar (Jedis and
+the database drivers shaded and relocated) to `/root/Java/jars/plugins/`. Java 21.

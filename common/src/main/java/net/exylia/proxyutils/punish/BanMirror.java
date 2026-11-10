@@ -6,8 +6,7 @@ import com.google.gson.JsonParser;
 import net.exylia.proxyutils.Platform;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import redis.clients.jedis.Jedis;
-import redis.clients.jedis.JedisPool;
+import net.exylia.proxyutils.wire.Wire;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -22,7 +21,7 @@ import java.util.UUID;
  *
  * <p>{@code <prefix>:punish:ban:<uuid>} and {@code <prefix>:punish:ipban:<sha256 hex of the address>}
  * each hold {@code {"id","type","expires","mini","legacy"}}. ExyliaStaff writes, expires and deletes
- * them; this only reads, and still ignores one whose {@code expires} has passed. Redis being down
+ * them; this only reads, and still ignores one whose {@code expires} has passed. The wire being down
  * lets everybody in, with a warning at most once a minute: the backends check their own database
  * too, so this is an accelerator and the proxy-level gate, never the only one.
  */
@@ -31,7 +30,7 @@ public final class BanMirror {
     private static final long WARN_EVERY_MILLIS = 60_000;
 
     private final Platform platform;
-    private final JedisPool pool;
+    private final Wire wire;
     private final String prefix;
     private volatile long lastWarning;
 
@@ -44,9 +43,9 @@ public final class BanMirror {
     public record Denial(long id, @NotNull String mini, @NotNull String legacy) {
     }
 
-    public BanMirror(@NotNull Platform platform, @NotNull JedisPool pool, @NotNull String prefix) {
+    public BanMirror(@NotNull Platform platform, @NotNull Wire wire, @NotNull String prefix) {
         this.platform = platform;
-        this.pool = pool;
+        this.wire = wire;
         this.prefix = prefix;
     }
 
@@ -57,11 +56,11 @@ public final class BanMirror {
      * @param address the address as text, {@code InetAddress.getHostAddress()}
      */
     public @NotNull Optional<Denial> check(@NotNull UUID player, @Nullable String address) {
-        try (Jedis jedis = pool.getResource()) {
+        try {
             long now = System.currentTimeMillis();
-            Optional<Denial> denial = parse(jedis.get(banKey(prefix, player)), now);
+            Optional<Denial> denial = parse(wire.get(banKey(prefix, player)), now);
             if (denial.isEmpty() && address != null && !address.isEmpty()) {
-                denial = parse(jedis.get(ipBanKey(prefix, address)), now);
+                denial = parse(wire.get(ipBanKey(prefix, address)), now);
             }
             return denial;
         } catch (RuntimeException down) {

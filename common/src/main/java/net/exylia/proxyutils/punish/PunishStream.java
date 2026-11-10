@@ -2,9 +2,7 @@ package net.exylia.proxyutils.punish;
 
 import net.exylia.proxyutils.Platform;
 import org.jetbrains.annotations.NotNull;
-import redis.clients.jedis.Jedis;
-import redis.clients.jedis.JedisPool;
-import redis.clients.jedis.params.XAddParams;
+import net.exylia.proxyutils.wire.Wire;
 
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
@@ -12,7 +10,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 /**
- * Writes {@link ExternalPunishment}s to the Redis stream {@code <prefix>:punish:external}, where
+ * Writes {@link ExternalPunishment}s to the stream {@code <prefix>:punish:external}, where
  * ExyliaStaff reads them with a consumer group.
  *
  * <p>{@code XADD <key> MAXLEN ~ 200000 * json <json>}. Live punishments go through one writer
@@ -26,7 +24,7 @@ public final class PunishStream implements AutoCloseable {
     private static final int ATTEMPTS = 3;
 
     private final Platform platform;
-    private final JedisPool pool;
+    private final Wire wire;
     private final String key;
     private final ExecutorService writer = Executors.newSingleThreadExecutor(task -> {
         Thread thread = new Thread(task, "ExyliaProxyUtils-Punish");
@@ -34,9 +32,9 @@ public final class PunishStream implements AutoCloseable {
         return thread;
     });
 
-    public PunishStream(@NotNull Platform platform, @NotNull JedisPool pool, @NotNull String prefix) {
+    public PunishStream(@NotNull Platform platform, @NotNull Wire wire, @NotNull String prefix) {
         this.platform = platform;
-        this.pool = pool;
+        this.wire = wire;
         this.key = key(prefix);
     }
 
@@ -66,9 +64,8 @@ public final class PunishStream implements AutoCloseable {
     public void write(@NotNull String json) throws InterruptedException {
         RuntimeException last = null;
         for (int attempt = 1; attempt <= ATTEMPTS; attempt++) {
-            try (Jedis jedis = pool.getResource()) {
-                jedis.xadd(key, XAddParams.xAddParams().maxLen(MAX_LENGTH).approximateTrimming(),
-                        Map.of("json", json));
+            try {
+                wire.streamAdd(key, Map.of("json", json), MAX_LENGTH);
                 return;
             } catch (RuntimeException failure) {
                 last = failure;

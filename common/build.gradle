@@ -4,6 +4,13 @@ dependencies {
     // Shaded and relocated into the universal jar by the root project; the
     // same version ExyliaLib installs on the backends.
     implementation 'redis.clients:jedis:5.1.0'
+    // transport=database: the backends' own database instead of Redis. One
+    // driver covers MySQL and MariaDB; all three are relocated in the jar.
+    // waffle-jna (and JNA, caffeine) is the MariaDB driver's Windows-login
+    // support: 6 MB of native code nobody on a proxy uses.
+    implementation('org.mariadb.jdbc:mariadb-java-client:3.4.1') { exclude group: 'com.github.waffle' }
+    implementation('org.postgresql:postgresql:42.7.4') { exclude group: 'org.checkerframework' }
+    implementation 'org.mongodb:mongodb-driver-sync:4.11.1'
     // The ban plugins the proxy may have. compileOnly: none of them ships in
     // the jar, and nothing touches their classes unless they are installed.
     compileOnly 'com.gitlab.ruany:LiteBansAPI:0.6.1'

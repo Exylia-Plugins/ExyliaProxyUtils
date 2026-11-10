@@ -11,7 +11,7 @@ def outputDirectory = findProperty('jarsDir') ?: '/root/Java/jars'
 
 allprojects {
     group = 'net.exylia'
-    version = '2.2.0'
+    version = '2.3.0'
 
     repositories {
         mavenCentral()
@@ -68,6 +68,13 @@ shadowJar {
     // own copy wins there (parent-first); Bungee has none and uses ours.
     relocate 'org.json', 'net.exylia.proxyutils.libs.json'
     relocate 'com.google.gson', 'net.exylia.proxyutils.libs.gson'
+    // The database transport's drivers, so another proxy plugin's copy of any
+    // of them never meets ours.
+    relocate 'org.mariadb.jdbc', 'net.exylia.proxyutils.libs.mariadb'
+    relocate 'org.postgresql', 'net.exylia.proxyutils.libs.postgresql'
+    relocate 'com.mongodb', 'net.exylia.proxyutils.libs.mongodb'
+    relocate 'org.bson', 'net.exylia.proxyutils.libs.bson'
+    mergeServiceFiles()
     exclude 'META-INF/maven/**'
     exclude 'META-INF/*.SF', 'META-INF/*.DSA', 'META-INF/*.RSA'
 }
