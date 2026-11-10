@@ -6,16 +6,21 @@ import com.velocitypowered.api.proxy.server.RegisteredServer;
 import net.exylia.proxyutils.Platform;
 import net.exylia.proxyutils.ProxyPlayer;
 import net.exylia.proxyutils.Reply;
+import net.exylia.proxyutils.ServerStatus;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 
+import java.time.Duration;
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 
 /** Velocity, seen through {@link Platform}. */
 final class VelocityPlatform implements Platform {
@@ -115,5 +120,19 @@ final class VelocityPlatform implements Platform {
         }
         return LegacyComponentSerializer.legacySection().deserialize(
                 legacy.isBlank() ? "You are banned from this network." : legacy);
+    }
+
+    @Override
+    public @NotNull CompletableFuture<List<ServerStatus>> servers(@NotNull Duration timeout) {
+        List<CompletableFuture<ServerStatus>> pings = new ArrayList<>();
+        for (RegisteredServer registered : server.getAllServers()) {
+            String name = registered.getServerInfo().getName();
+            int players = registered.getPlayersConnected().size();
+            pings.add(registered.ping()
+                    .orTimeout(timeout.toMillis(), TimeUnit.MILLISECONDS)
+                    .handle((ping, failure) -> new ServerStatus(name, players, failure == null)));
+        }
+        return CompletableFuture.allOf(pings.toArray(CompletableFuture[]::new))
+                .thenApply(done -> pings.stream().map(CompletableFuture::join).toList());
     }
 }

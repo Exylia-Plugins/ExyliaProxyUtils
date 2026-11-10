@@ -2,7 +2,9 @@ package net.exylia.proxyutils;
 
 import org.jetbrains.annotations.NotNull;
 
+import java.time.Duration;
 import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -74,4 +76,17 @@ public interface Platform {
      * @return false for a player who is not connected
      */
     boolean disconnect(@NotNull UUID player, @NotNull String mini, @NotNull String legacy);
+
+    /**
+     * Every registered backend with its player count, pinged now.
+     *
+     * <p>A server that does not answer within {@code timeout} is reported
+     * offline; the future never completes exceptionally.
+     *
+     * @param timeout how long one ping may take
+     * @return the servers, in no particular order; empty on a proxy that does not say
+     */
+    default @NotNull CompletableFuture<List<ServerStatus>> servers(@NotNull Duration timeout) {
+        return CompletableFuture.completedFuture(List.of());
+    }
 }

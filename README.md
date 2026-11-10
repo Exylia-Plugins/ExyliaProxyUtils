@@ -58,6 +58,7 @@ payload means.
 | `player` | a name or a uuid | `OK` with `uuid\|name\|server` for a connected player (server empty while between servers); `REJECTED` otherwise. |
 | `players` | ignored | `OK` with every connected name, comma-separated. ExyliaLib asks every 10 s and keeps the answer for tab completion. |
 | `kick` | `<uuid>\|<mini>\|<legacy>`, split on the first two pipes (the legacy screen may hold more) | `OK` once the player was disconnected, with the MiniMessage screen on Velocity and the §-coded one on BungeeCord; `REJECTED not connected` otherwise. ExyliaStaff kicks and bans players on other servers this way. |
+| `servers` | ignored | `OK` with every registered backend as `name,players,up` joined by `;` (`up` is `1` or `0`; a name may hold commas, so read the last two fields). Each server is pinged with a 1.5 s timeout and one round answers every request for 3 s. ExyliaLib's `Proxy.servers()` asks every 3 s while anyone is online. |
 | `punish-sources` | ignored | `OK` with the ban plugins installed on this proxy, comma-separated origins (`LITEBANS,LIBERTYBANS`), empty for none. |
 | `punish-import` | an origin: `LITEBANS`, `LIBERTYBANS`, `ADVANCEDBAN` or `BANMANAGER` | `OK started <ORIGIN>`, and that plugin's whole history goes into the punishment stream on a thread of its own, with `import:true`, logging its progress every 1000 entries and the total at the end; `REJECTED <ORIGIN> not installed` (or `... import already running`). |
 

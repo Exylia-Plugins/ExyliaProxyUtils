@@ -6,6 +6,7 @@ import net.exylia.proxyutils.module.KickModule;
 import net.exylia.proxyutils.module.PingModule;
 import net.exylia.proxyutils.module.PlayerModule;
 import net.exylia.proxyutils.module.PlayersModule;
+import net.exylia.proxyutils.module.ServersModule;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Locale;
@@ -35,7 +36,7 @@ public final class Bridge {
 
     /**
      * A bridge with the modules ExyliaLib expects: {@code ping},
-     * {@code commands}, {@code connect}, {@code player}, {@code players} and {@code kick}.
+     * {@code commands}, {@code connect}, {@code player}, {@code players}, {@code kick} and {@code servers}.
      */
     public static @NotNull Bridge withBuiltIns(@NotNull Platform platform, @NotNull Publisher publisher) {
         Bridge bridge = new Bridge(platform);
@@ -45,6 +46,7 @@ public final class Bridge {
         bridge.register(new PlayerModule(platform));
         bridge.register(new PlayersModule(platform));
         bridge.register(new KickModule(platform));
+        bridge.register(new ServersModule(platform));
         return bridge;
     }
 

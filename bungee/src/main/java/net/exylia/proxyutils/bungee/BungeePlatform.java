@@ -3,6 +3,7 @@ package net.exylia.proxyutils.bungee;
 import net.exylia.proxyutils.Platform;
 import net.exylia.proxyutils.ProxyPlayer;
 import net.exylia.proxyutils.Reply;
+import net.exylia.proxyutils.ServerStatus;
 import net.md_5.bungee.api.ProxyServer;
 import net.md_5.bungee.api.chat.TextComponent;
 import net.md_5.bungee.api.config.ServerInfo;
@@ -10,10 +11,14 @@ import net.md_5.bungee.api.connection.ProxiedPlayer;
 import net.md_5.bungee.api.connection.Server;
 import org.jetbrains.annotations.NotNull;
 
+import java.time.Duration;
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 
 /** BungeeCord, seen through {@link Platform}. */
@@ -116,5 +121,20 @@ final class BungeePlatform implements Platform {
         }
         who.disconnect(TextComponent.fromLegacy(legacy.isBlank() ? mini : legacy));
         return true;
+    }
+
+    @Override
+    public @NotNull CompletableFuture<List<ServerStatus>> servers(@NotNull Duration timeout) {
+        List<CompletableFuture<ServerStatus>> pings = new ArrayList<>();
+        for (ServerInfo info : proxy.getServers().values()) {
+            String name = info.getName();
+            int players = info.getPlayers().size();
+            CompletableFuture<Boolean> answered = new CompletableFuture<>();
+            info.ping((ping, failure) -> answered.complete(failure == null && ping != null));
+            pings.add(answered.completeOnTimeout(false, timeout.toMillis(), TimeUnit.MILLISECONDS)
+                    .thenApply(up -> new ServerStatus(name, players, up)));
+        }
+        return CompletableFuture.allOf(pings.toArray(CompletableFuture[]::new))
+                .thenApply(done -> pings.stream().map(CompletableFuture::join).toList());
     }
 }
