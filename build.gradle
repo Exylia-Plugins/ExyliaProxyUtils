@@ -11,7 +11,7 @@ def outputDirectory = findProperty('jarsDir') ?: '/root/Java/jars'
 
 allprojects {
     group = 'net.exylia'
-    version = '2.3.0'
+    version = '2.4.0'
 
     repositories {
         mavenCentral()
@@ -21,6 +21,8 @@ allprojects {
         }
         // LiteBans API and AdvancedBan.
         maven { url = 'https://jitpack.io' }
+        // PacketEvents, optional on Velocity.
+        maven { url = 'https://repo.codemc.io/repository/maven-releases/' }
         // LibertyBans and its event bus, Omnibus.
         maven { url = 'https://mvn-repo.arim.space/affero-gpl3/' }
         maven { url = 'https://mvn-repo.arim.space/lesser-gpl3/' }

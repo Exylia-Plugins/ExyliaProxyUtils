@@ -1,6 +1,8 @@
 dependencies {
     implementation project(':common')
     compileOnly 'com.velocitypowered:velocity-api:3.4.0'
+    // Optional at runtime: only ChatHoldModule touches it, and only when the plugin is there.
+    compileOnly 'com.github.retrooper:packetevents-velocity:2.13.0'
     compileOnly('me.confuser.banmanager:BanManagerCommon:7.10.0') { transitive = false }
     compileOnly('me.confuser.banmanager:BanManagerVelocity:7.10.0') { transitive = false }
     // Writes velocity-plugin.json from the @Plugin annotation.

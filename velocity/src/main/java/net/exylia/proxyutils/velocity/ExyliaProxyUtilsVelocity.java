@@ -34,7 +34,8 @@ import java.nio.file.Path;
         // Optional: started after these when present, so their APIs are up when the hooks look.
         dependencies = {@Dependency(id = "litebans", optional = true),
                 @Dependency(id = "libertybans", optional = true),
-                @Dependency(id = "banmanager", optional = true)})
+                @Dependency(id = "banmanager", optional = true),
+                @Dependency(id = "packetevents", optional = true)})
 public final class ExyliaProxyUtilsVelocity {
 
     private final ProxyServer server;
@@ -66,6 +67,10 @@ public final class ExyliaProxyUtilsVelocity {
                     () -> LibertyBansSource.install(platform, punishments.stream()));
             punishments.install(BanManagerSource.ORIGIN,
                     () -> BanManagerVelocity.install(this, server, punishments.stream()));
+            // PacketEvents is optional: without it, chat a proxy plugin sends still shows over open screens.
+            if (server.getPluginManager().isLoaded("packetevents")) {
+                bridge.register(ChatHoldModule.install(this, server));
+            }
             logger.info("ExyliaProxyUtils {} ready on Redis {}:{}; modules: {}", BuildConstants.VERSION,
                     config.host(), config.port(), bridge.modules());
         } catch (Exception failure) {
