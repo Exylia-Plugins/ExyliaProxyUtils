@@ -2,3 +2,15 @@
 build/
 .idea/
 *.iml
+
+# Local tooling and build output
+.codegraph/
+.atl/
+.orca/
+.playwright-mcp/
+.claude/settings.local.json
+bin/
+/out/
+/dist/
+/target/
+*.class
