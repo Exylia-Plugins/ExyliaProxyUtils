@@ -52,17 +52,6 @@ gets the section appended with `transport=redis` and keeps working as it did.
 The MariaDB driver (which also speaks MySQL), PostgreSQL's and MongoDB's are
 shaded and relocated in the jar.
 
-## A /lobby command (since 2.5.0, Velocity)
-
-```properties
-lobby.server=lobby          # empty: no command
-lobby.commands=lobby,hub    # name, then aliases
-```
-
-Any player can run it; it moves them to `lobby.server`, and Velocity tells them
-if they are already there or the server is down. A file from before 2.5.0 gets
-the section appended, off. Restart to apply.
-
 ## Updates
 
 Every push to `main` with a new version in `build.gradle` publishes a GitHub

@@ -38,19 +38,5 @@ class BridgeConfigTest {
         assertEquals("postgresql", config.target().type());
         assertEquals(5433, config.target().port());
         assertTrue(config.target().supported());
-        assertEquals("", config.lobbyServer(), "no lobby command until a server is named");
-    }
-
-    @Test
-    void lobbyCommandIsRead(@TempDir Path folder) throws Exception {
-        Path file = folder.resolve("config.properties");
-        Files.writeString(file, "redis.host=x\ntransport=redis\n");
-        BridgeConfig.load(folder);
-        assertTrue(Files.readString(file).contains("lobby.server="), "older file gains the section");
-        Files.writeString(file, Files.readString(file).replace("lobby.server=", "lobby.server=hub1")
-                .replace("lobby.commands=lobby,hub", "lobby.commands= spawn , ,l"));
-        BridgeConfig config = BridgeConfig.load(folder);
-        assertEquals("hub1", config.lobbyServer());
-        assertEquals(java.util.List.of("spawn", "l"), config.lobbyCommands());
     }
 }
