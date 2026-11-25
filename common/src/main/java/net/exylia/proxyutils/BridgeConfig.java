@@ -7,6 +7,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Properties;
 
 /**
@@ -26,11 +28,14 @@ import java.util.Properties;
  * @param updates   whether new releases install themselves on restart (see {@link Updater})
  * @param byDatabase whether the backends' database carries the bridge instead of Redis
  * @param target    that database, read only when {@code byDatabase}
+ * @param lobbyServer   the server {@code lobbyCommands} send a player to, empty for no such command
+ * @param lobbyCommands the command name and its aliases, first one is the name
  */
 public record BridgeConfig(@NotNull String host, int port, @NotNull String password,
                            @NotNull String username, boolean ssl, int database,
                            @NotNull String keyPrefix, boolean updates,
-                           boolean byDatabase, @NotNull DatabaseTarget target) {
+                           boolean byDatabase, @NotNull DatabaseTarget target,
+                           @NotNull String lobbyServer, @NotNull List<String> lobbyCommands) {
 
     private static final String FILE = "config.properties";
 
@@ -52,6 +57,16 @@ public record BridgeConfig(@NotNull String host, int port, @NotNull String passw
             database.password=
             # mongodb only: a full mongodb:// URI, which wins over the fields above.
             database.connection-string=
+            """;
+
+    /** Appended to a file without it: off until the owner names a server. */
+    private static final String LOBBY_SECTION = """
+
+            # A /lobby command for players: the server it sends them to (a name from
+            # this proxy's server list), empty for no command. Restart to apply.
+            lobby.server=
+            # The command and its aliases, comma separated.
+            lobby.commands=lobby,hub
             """;
 
     /** Reads the file, writing the defaults first if it does not exist. */
@@ -76,7 +91,7 @@ public record BridgeConfig(@NotNull String host, int port, @NotNull String passw
                     redis.key-prefix=exylia
                     # New releases download at start and stop and load on the next restart.
                     updates.enabled=true
-                    """ + TRANSPORT_SECTION.stripLeading());
+                    """ + TRANSPORT_SECTION.stripLeading() + LOBBY_SECTION);
         }
         Properties values = new Properties();
         try (InputStream in = Files.newInputStream(file)) {
@@ -86,6 +101,9 @@ public record BridgeConfig(@NotNull String host, int port, @NotNull String passw
             // Appended, never rewritten: the owner's own lines and comments
             // stay as they are, and transport=redis is what the file meant.
             Files.writeString(file, TRANSPORT_SECTION, java.nio.file.StandardOpenOption.APPEND);
+        }
+        if (!values.containsKey("lobby.server")) {
+            Files.writeString(file, LOBBY_SECTION, java.nio.file.StandardOpenOption.APPEND);
         }
         String prefix = values.getProperty("redis.key-prefix", "exylia").trim();
         return new BridgeConfig(
@@ -105,7 +123,10 @@ public record BridgeConfig(@NotNull String host, int port, @NotNull String passw
                         values.getProperty("database.name", "minecraft").trim(),
                         values.getProperty("database.username", "root").trim(),
                         values.getProperty("database.password", ""),
-                        values.getProperty("database.connection-string", "").trim()));
+                        values.getProperty("database.connection-string", "").trim()),
+                values.getProperty("lobby.server", "").trim(),
+                Arrays.stream(values.getProperty("lobby.commands", "lobby,hub").split(","))
+                        .map(String::trim).filter(name -> !name.isEmpty()).toList());
     }
 
     private static int port(String value) {

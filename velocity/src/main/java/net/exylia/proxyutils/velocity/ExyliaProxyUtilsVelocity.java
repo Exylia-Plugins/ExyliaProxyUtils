@@ -1,6 +1,7 @@
 package net.exylia.proxyutils.velocity;
 
 import com.google.inject.Inject;
+import com.velocitypowered.api.command.SimpleCommand;
 import com.velocitypowered.api.event.EventTask;
 import com.velocitypowered.api.event.PostOrder;
 import com.velocitypowered.api.event.ResultedEvent;
@@ -11,6 +12,7 @@ import com.velocitypowered.api.event.proxy.ProxyShutdownEvent;
 import com.velocitypowered.api.plugin.Dependency;
 import com.velocitypowered.api.plugin.Plugin;
 import com.velocitypowered.api.plugin.annotation.DataDirectory;
+import com.velocitypowered.api.proxy.Player;
 import com.velocitypowered.api.proxy.ProxyServer;
 import net.exylia.proxyutils.BridgeConfig;
 import net.exylia.proxyutils.RedisBridge;
@@ -23,6 +25,7 @@ import org.slf4j.Logger;
 
 import java.net.InetSocketAddress;
 import java.nio.file.Path;
+import java.util.List;
 
 /**
  * The Velocity half: reads the config, opens the Redis bridge, hooks the ban plugins it finds,
@@ -71,12 +74,32 @@ public final class ExyliaProxyUtilsVelocity {
             if (server.getPluginManager().isLoaded("packetevents")) {
                 bridge.register(ChatHoldModule.install(this, server));
             }
+            registerLobby(config);
             logger.info("ExyliaProxyUtils {} ready on Redis {}:{}; modules: {}", BuildConstants.VERSION,
                     config.host(), config.port(), bridge.modules());
         } catch (Exception failure) {
             logger.error("ExyliaProxyUtils could not start; check {}/config.properties: {}",
                     folder, failure.getMessage());
         }
+    }
+
+    /** {@code lobby.server}: players run it to go there; Velocity reports a failed or needless move. */
+    private void registerLobby(BridgeConfig config) {
+        if (config.lobbyServer().isEmpty() || config.lobbyCommands().isEmpty()) {
+            return;
+        }
+        List<String> names = config.lobbyCommands();
+        server.getCommandManager().register(server.getCommandManager().metaBuilder(names.get(0))
+                .aliases(names.subList(1, names.size()).toArray(String[]::new)).plugin(this).build(),
+                (SimpleCommand) invocation -> {
+                    if (!(invocation.source() instanceof Player player)) {
+                        return;
+                    }
+                    server.getServer(config.lobbyServer()).ifPresentOrElse(
+                            target -> player.createConnectionRequest(target).fireAndForget(),
+                            () -> logger.warn("lobby.server {} is not in this proxy's server list",
+                                    config.lobbyServer()));
+                });
     }
 
     /** Off the network thread: the mirror is a Redis round trip. */
